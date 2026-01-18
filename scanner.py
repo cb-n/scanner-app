@@ -409,24 +409,35 @@ def process_unproc_folder(doc_dir: str,
                           trocr_processor: TrOCRProcessor,
                           trocr_model: VisionEncoderDecoderModel,
                           trocr_device: str) -> None:
-    unproc_files = [f for f in os.listdir(doc_dir) if f.endswith(".unproc.pdf")]
-    if not unproc_files:
+    group_id = os.path.basename(os.path.normpath(doc_dir))
+
+    base = os.path.join(doc_dir, group_id)
+    final_pdf = base + ".pdf"
+    ocr_path = base + ".ocr.txt"
+    manu_path = base + ".manu.txt"
+    unproc_path = base + ".unproc.pdf"
+
+    if os.path.exists(final_pdf) and os.path.exists(ocr_path) and os.path.exists(manu_path):
         return
 
-    for fname in unproc_files:
-        unproc_path = os.path.join(doc_dir, fname)
-        group_id = fname[:-len(".unproc.pdf")]
+    tiffs = tiffs_for_group_in_doc_folder(doc_dir, group_id)
+    has_unproc = os.path.exists(unproc_path)
 
-        tiffs = tiffs_for_group_in_doc_folder(doc_dir, group_id)
-        if not tiffs:
+    if not tiffs:
+        if has_unproc:
             log(f"PROC: found {unproc_path} but no TIFFs inside the same folder; skipping.")
-            continue
+        return
 
+    if has_unproc:
         please_wait(f"PROC mode: processing {unproc_path} ...")
-        write_group_outputs(group_id, tiffs, easy_reader, trocr_processor, trocr_model, trocr_device)
+    else:
+        please_wait(f"PROC mode: processing TIFF-only folder (missing .unproc.pdf): {doc_dir} ...")
 
+    write_group_outputs(group_id, tiffs, easy_reader, trocr_processor, trocr_model, trocr_device)
+
+    if has_unproc:
         delete_files([unproc_path], ".unproc.pdf")
-        delete_files(tiffs, "TIFF")
+    delete_files(tiffs, "TIFF")
 
 
 def proc_all_folders() -> None:

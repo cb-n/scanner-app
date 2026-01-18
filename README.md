@@ -36,9 +36,9 @@ Those TIFFs are later consumed by `--proc`.
 
 ## Requirements
 
-### 1. Windows
-- Windows 10 or Windows 11
-- Epson ES-50 (or similar WIA-compatible scanner)
+### 1. Tested PC Setup
+- Windows 11
+- Epson ES-50 (WIA-compatible scanner)
 
 ### 2. NAPS2
 Install NAPS2 (required for scanning):
@@ -50,42 +50,40 @@ Verify NAPS2 sees your scanner:
 & "C:\Program Files\NAPS2\NAPS2.Console.exe" --listdevices --driver wia
 ```
 
-You should see `EPSON ES-50`.
+You should see `EPSON ES-50`. If not, install the Epson driver too.
 
-### 3. Python
-Install Python 3.11 (64-bit):
-https://www.python.org/downloads/windows/
+### 3. Python setup
 
-During install:
-- Check “Add Python to PATH”
 
-Verify:
-```
+#### Create Python 3.11 venv
+
+```bash
+# Similar on Mac/Linux; this is Windows Powershell
+py -3.11 -m venv .venv
+
+# Activate virtual environment
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+
+# Should print 3.11.x
 python --version
 ```
 
-### 4. Virtual Environment
-```
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-If blocked:
-```
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
+#### Install dependencies
 
-### 5. Python Dependencies
-```
-pip install numpy pillow reportlab easyocr transformers sentencepiece accelerate
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-```
+```bash
+# Force install the GPU (CUDA) version of PyTorch (nightly for Blackwell support)
+python -m pip install --upgrade pip
+pip uninstall -y torch torchvision torchaudio
+pip cache purge
+pip install --no-cache-dir --force-reinstall torch torchvision torchaudio --pre --index-url https://download.pytorch.org/whl/nightly/cu128
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.version.cuda); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
 
-Verify GPU:
-```
-python - <<EOF
-import torch
-print(torch.cuda.is_available())
-EOF
+# Install other dependencies...
+pip install "numpy<2" pillow reportlab easyocr transformers sentencepiece accelerate
+
+# Verify GPU enabled:
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"
 ```
 
 ---
@@ -94,7 +92,7 @@ EOF
 
 ### Normal Mode
 ```
-python scan_ocr_hw.py
+python scanner.py
 ```
 
 ENTER = scan/add  
@@ -108,7 +106,7 @@ Outputs:
 
 ### FAST Mode
 ```
-python scan_ocr_hw.py --fast
+python scanner.py --fast
 ```
 
 - Scans only
@@ -118,7 +116,7 @@ python scan_ocr_hw.py --fast
 
 ### PROC Mode
 ```
-python scan_ocr_hw.py --proc
+python scanner.py --proc
 ```
 
 - Processes all folders containing .unproc.pdf
